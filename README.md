@@ -1,25 +1,24 @@
 # tiny-gpt-codegolfer
 
-Building a small code-golf-playing LLM from scratch: BPE tokenizer → tiny
-GPT-2 → pretraining → RL → SFT.
+BPEトークナイザー→小型GPT-2→事前学習→強化学習→SFTという流れで、ゼロから作るコードゴルフ特化のLLM。短くてテストに通るPythonコードを書けるように育てていく個人プロジェクト。
 
-## Progress
+## 進捗
 
-- [x] BPE tokenizer (`src/codebot/tokenizer`)
-- [ ] Tiny GPT-2 implementation
-- [ ] Pretraining
-- [ ] RL (execution-based reward: tests pass + shorter code wins)
+- [x] BPEトークナイザー(`src/codebot/tokenizer`)
+- [ ] 小型GPT-2の実装
+- [ ] 事前学習
+- [ ] 強化学習(報酬: テスト通過 + コードが短いほど高得点)
 - [ ] SFT
 
-## Tokenizer
+## トークナイザー
 
 ```
 python -m venv .venv
 .venv/Scripts/pip install pytest
 
-# train on data/corpus and save to data/tokenizer.json
+# data/corpus 以下のコーパスで学習し、data/tokenizer.json に保存
 .venv/Scripts/python scripts/train_tokenizer.py --vocab-size 512
 
-# run tests
+# テスト実行
 .venv/Scripts/python -m pytest tests/ -v
 ```
