@@ -15,7 +15,29 @@ CORPUS = [
 def test_vocab_size_matches_request():
     tok = BPETokenizer()
     tok.train(CORPUS, vocab_size=280)
-    assert len(tok.vocab) == 280
+    # +1 for the <|endoftext|> special token appended after BPE training.
+    assert len(tok.vocab) == 281
+
+
+def test_eot_inserted_between_documents():
+    tok = BPETokenizer()
+    tok.train(CORPUS, vocab_size=280)
+    eot_id = tok.special_tokens[tok.EOT_TOKEN]
+
+    ids = tok.encode_with_eot(CORPUS)
+
+    assert ids.count(eot_id) == len(CORPUS)
+    assert ids[-1] == eot_id
+    assert ids == tok.encode(CORPUS[0]) + [eot_id] + tok.encode(CORPUS[1]) + [
+        eot_id
+    ] + tok.encode(CORPUS[2]) + [eot_id]
+
+
+def test_eot_round_trips_through_decode():
+    tok = BPETokenizer()
+    tok.train(CORPUS, vocab_size=280)
+    eot_id = tok.special_tokens[tok.EOT_TOKEN]
+    assert tok.decode([eot_id]) == tok.EOT_TOKEN
 
 
 def test_encode_decode_roundtrip():

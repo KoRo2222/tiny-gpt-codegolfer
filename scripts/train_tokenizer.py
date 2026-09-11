@@ -47,6 +47,15 @@ def main() -> None:
     print(f"encoded ({len(ids)} tokens): {ids}")
     print(f"decoded matches original: {decoded == sample}")
 
+    # This is the shape pretraining will consume: every corpus doc back to
+    # back, separated by <|endoftext|>, as one flat id stream.
+    packed = tokenizer.encode_with_eot(texts)
+    eot_id = tokenizer.special_tokens[tokenizer.EOT_TOKEN]
+    print(
+        f"\npacked {len(texts)} docs into {len(packed)} tokens "
+        f"({packed.count(eot_id)} <|endoftext|> boundaries, id={eot_id})"
+    )
+
 
 if __name__ == "__main__":
     main()
