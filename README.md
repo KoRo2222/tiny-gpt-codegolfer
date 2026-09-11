@@ -28,3 +28,7 @@ python -m venv .venv
 # テスト実行
 .venv/Scripts/python -m pytest tests/ -v
 ```
+
+## License
+
+Copyright (c) 2026 KoRo2. All rights reserved.
