@@ -1,4 +1,4 @@
-# codebot
+# tiny-gpt-codegolfer
 
 Building a small code-golf-playing LLM from scratch: BPE tokenizer → tiny
 GPT-2 → pretraining → RL → SFT.
