@@ -19,6 +19,30 @@ def test_output_and_weight_shapes():
     assert attn_weights.shape == (2, 3, 5)
 
 
+def test_each_query_is_looked_up_independently():
+    # A batch of distinct queries against the same keys/values must not
+    # collapse into a single shared lookup -- each query row gets its own
+    # weights (computed from its own scores) and its own output.
+    keys = torch.randn(1, 4, 8)
+    values = torch.randn(1, 4, 4)
+    query = torch.randn(1, 3, 8)
+
+    output, attn_weights = soft_dictionary_attention(query, keys, values)
+
+    for i in range(3):
+        for j in range(i + 1, 3):
+            assert not torch.allclose(attn_weights[0, i], attn_weights[0, j])
+            assert not torch.allclose(output[0, i], output[0, j])
+
+    # Querying one at a time must match the corresponding row of the batch.
+    for i in range(3):
+        single_output, single_weights = soft_dictionary_attention(
+            query[:, i : i + 1], keys, values
+        )
+        assert torch.allclose(single_output[0, 0], output[0, i], atol=1e-6)
+        assert torch.allclose(single_weights[0, 0], attn_weights[0, i], atol=1e-6)
+
+
 def test_weights_form_a_probability_distribution():
     query = torch.randn(1, 4, 8)
     keys = torch.randn(1, 6, 8)
