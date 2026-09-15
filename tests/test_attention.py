@@ -19,6 +19,40 @@ def test_output_and_weight_shapes():
     assert attn_weights.shape == (2, 3, 5)
 
 
+def test_scores_are_divided_by_sqrt_d_k():
+    d_k = 16
+    query = torch.randn(1, 1, d_k)
+    keys = torch.randn(1, 5, d_k)
+    values = torch.randn(1, 5, 3)
+
+    _, attn_weights = soft_dictionary_attention(query, keys, values)
+
+    raw_scores = query @ keys.transpose(-2, -1)
+    expected_weights = torch.softmax(raw_scores / (d_k**0.5), dim=-1)
+    assert torch.allclose(attn_weights, expected_weights, atol=1e-6)
+
+    # Softmax over the *unscaled* scores is a different distribution --
+    # proof the divisor is actually doing something, not a no-op.
+    unscaled_weights = torch.softmax(raw_scores, dim=-1)
+    assert not torch.allclose(attn_weights, unscaled_weights, atol=1e-4)
+
+
+def test_scaling_keeps_large_d_k_from_saturating_softmax():
+    # With unit-variance query/keys, dot products grow with d_k, so an
+    # unscaled softmax over a large d_k saturates into a near one-hot
+    # distribution. Scaling by 1/sqrt(d_k) keeps the pre-softmax variance
+    # ~constant regardless of d_k, so weights stay spread out instead.
+    torch.manual_seed(0)
+    d_k = 4096
+    query = torch.randn(1, 1, d_k)
+    keys = torch.randn(1, 5, d_k)
+    values = torch.randn(1, 5, 3)
+
+    _, attn_weights = soft_dictionary_attention(query, keys, values)
+
+    assert attn_weights.max().item() < 0.9
+
+
 def test_each_query_is_looked_up_independently():
     # A batch of distinct queries against the same keys/values must not
     # collapse into a single shared lookup -- each query row gets its own
