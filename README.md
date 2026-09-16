@@ -8,12 +8,13 @@ BPEトークナイザー→小型GPT-2→事前学習→強化学習→SFTとい
   - 学習アルゴリズム(バイトレベルBPE、GPT-2方式)
   - `<|endoftext|>`特殊トークンと、複数文書をEOT区切りの1本のid列に詰める`encode_with_eot`
 - [x] 事前トークン化(`src/codebot/data`) — コーパスをあらかじめid列に変換し、`data/train.bin` / `data/val.bin`として保存(学習ループが毎回テキストを読まず`np.memmap`で読める形式)
-- [x] 小型GPT-2の実装(`src/codebot/model`) — 1ブロック分のTransformerデコーダー
-  - Attention — 「ソフトなディクショナリ」としてのscaled dot-product attention。query-key類似度→softmax→valueの重み付き和。causalマスク対応
-  - `TokenPositionalEmbedding` — トークン埋め込み+位置埋め込み
-  - `MultiHeadAttention` — Attentionをヘッドに分けて並列適用
+- [x] 小型GPT-2の実装(`src/codebot/model`) — GPT-2方式のTransformerデコーダー
+  - Attention — 「ソフトなディクショナリ」としてのscaled dot-product attention。query-key類似度→softmax→valueの重み付き和。causalマスク・1/√d_kスケーリング対応
+  - `TokenPositionalEmbedding` — トークン埋め込み+位置埋め込み(絶対位置埋め込み)
+  - `MultiHeadAttention` — Attentionをヘッドに分けて並列適用。QKV射影とValue行列を使用
   - `FeedForward` — 位置ごとのLinear→GELU→Linear
-  - `TinyGPT` — Embed→Attention(残差)→FFN(残差)→Linear(lm_head)→(softmaxは`next_token_probs`で分離)
+  - `TransformerBlock` — Attention(Pre-LN, 残差)→FFN(Pre-LN, 残差)
+  - `TinyGPT` — Embed→`TransformerBlock`をn_layers層スタック→最終LayerNorm(ln_f)→Linear(lm_head、埋め込み層と重み共有)→(softmaxは`next_token_probs`で分離)
 - [ ] 事前学習
 - [ ] 強化学習(報酬: テスト通過 + コードが短いほど高得点)
 - [ ] SFT
