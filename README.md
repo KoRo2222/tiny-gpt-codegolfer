@@ -15,7 +15,10 @@ BPEトークナイザー→小型GPT-2→事前学習→強化学習→SFTとい
   - `FeedForward` — 位置ごとのLinear→GELU→Linear
   - `TransformerBlock` — Attention(Pre-LN, 残差)→FFN(Pre-LN, 残差)
   - `TinyGPT` — Embed→`TransformerBlock`をn_layers層スタック→最終LayerNorm(ln_f)→Linear(lm_head、埋め込み層と重み共有)→(softmaxは`next_token_probs`で分離)
-- [ ] 事前学習
+- [x] 事前学習(`src/codebot/train`) — `train.bin`からランダムな窓を切り出してnext-token予測、cross entropy loss、AdamWで学習
+  - `get_batch` — (入力, 1つずらしたターゲット)のペアをランダムサンプリング
+  - `train_loop` — 学習ステップ+定期的にval lossを評価。`TinyGPT.generate`で温度付きサンプリング生成も可能に
+  - `scripts/pretrain.py` — 学習前後の生成テキストを見比べられるCLI。現状のコーパスは899トークンしかなく過学習気味(train_loss/val_lossの乖離)だが、`if`/`return`など実際のコードらしいトークンが出るようになることは確認済み
 - [ ] 強化学習(報酬: テスト通過 + コードが短いほど高得点)
 - [ ] SFT
 
@@ -32,6 +35,9 @@ python -m venv .venv
 
 # コーパスを事前トークン化し、data/train.bin, data/val.bin に保存
 .venv/Scripts/python scripts/prepare_data.py
+
+# 事前学習(data/checkpoint.pt に保存)
+.venv/Scripts/python scripts/pretrain.py --steps 500
 
 # テスト実行
 .venv/Scripts/python -m pytest tests/ -v

@@ -45,7 +45,30 @@ class TinyGPT(nn.Module):
         x = self.ln_f(x)
         return self.lm_head(x)
 
-    def next_token_probs(self, token_ids: Tensor) -> Tensor:
+    def next_token_probs(self, token_ids: Tensor, temperature: float = 1.0) -> Tensor:
         """Softmax over the last position's logits: (batch, vocab_size)."""
         logits = self.forward(token_ids)
-        return torch.softmax(logits[:, -1, :], dim=-1)
+        return torch.softmax(logits[:, -1, :] / temperature, dim=-1)
+
+    @torch.no_grad()
+    def generate(
+        self, token_ids: Tensor, max_new_tokens: int, temperature: float = 1.0
+    ) -> Tensor:
+        """Sample max_new_tokens autoregressively, one at a time.
+
+        Each new token is fed back in as context for the next, and the
+        context is clipped to the last max_seq_len tokens since that's
+        all the positional embedding table has room for.
+        """
+        was_training = self.training
+        self.eval()
+        max_seq_len = self.embedding.position_embedding.num_embeddings
+
+        for _ in range(max_new_tokens):
+            context = token_ids[:, -max_seq_len:]
+            probs = self.next_token_probs(context, temperature=temperature)
+            next_id = torch.multinomial(probs, num_samples=1)
+            token_ids = torch.cat([token_ids, next_id], dim=1)
+
+        self.train(was_training)
+        return token_ids
