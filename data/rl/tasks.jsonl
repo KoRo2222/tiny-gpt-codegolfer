@@ -1,0 +1,6 @@
+{"prompt": "# Write a function that checks whether a number is prime.\n", "entry_point": "is_prime", "tests": ["assert is_prime(2) == True", "assert is_prime(1) == False", "assert is_prime(15) == False", "assert is_prime(17) == True"]}
+{"prompt": "# Write a function that reverses a string.\n", "entry_point": "reverse_string", "tests": ["assert reverse_string('abc') == 'cba'", "assert reverse_string('') == ''"]}
+{"prompt": "# Write a function that checks whether a string is a palindrome.\n", "entry_point": "is_palindrome", "tests": ["assert is_palindrome('level') == True", "assert is_palindrome('hello') == False"]}
+{"prompt": "# Write a function that computes the greatest common divisor of a and b.\n", "entry_point": "gcd", "tests": ["assert gcd(12, 18) == 6", "assert gcd(7, 13) == 1"]}
+{"prompt": "# Write a function that sums a list of numbers.\n", "entry_point": "sum_list", "tests": ["assert sum_list([1, 2, 3]) == 6", "assert sum_list([]) == 0"]}
+{"prompt": "# Write a function that computes the factorial of n.\n", "entry_point": "factorial", "tests": ["assert factorial(0) == 1", "assert factorial(5) == 120"]}
