@@ -21,7 +21,11 @@ BPEトークナイザー→小型GPT-2→事前学習→強化学習→SFTとい
   - `scripts/pretrain.py` — 学習前後の生成テキストを見比べられるCLI。チェックポイントはモデル構成(config)も一緒に保存(`save_checkpoint`/`load_checkpoint`)。現状のコーパスは899トークンしかなく過学習気味(train_loss/val_lossの乖離)だが、`if`/`return`など実際のコードらしいトークンが出るようになることは確認済み
   - `scripts/generate.py` — 学習済みチェックポイントから任意のプロンプトでテキスト生成するCLI(`--temperature`, `--seed`指定可)
 - [ ] 強化学習(報酬: テスト通過 + コードが短いほど高得点)
-- [ ] SFT
+- [x] SFT(`src/codebot/train/sft.py`) — 指示文(プロンプト)→コード(応答)のペアで事前学習済みモデルを微調整
+  - `build_example` — プロンプト+応答+EOTを1本のid列にし、損失は応答部分のトークンだけに掛ける(プロンプト部分は`ignore_index`でマスク)
+  - `sft_loop` — 1件ずつ(batch_size=1)optimizer stepするシンプルな実装。paddingやattentionマスクをまだ持っていないためバッチ化は見送り
+  - `data/sft/examples.jsonl` — 「〜する関数を書け」という指示文と、対応するPython関数のペア18件
+  - `scripts/sft.py` — 事前学習済みチェックポイントを読み込んでSFTし、`data/checkpoint_sft.pt`に保存。学習前後の生成を比較可能
 
 ## セットアップ
 
@@ -42,6 +46,9 @@ python -m venv .venv
 
 # 学習済みチェックポイントからテキスト生成
 .venv/Scripts/python scripts/generate.py --prompt "def " --temperature 0.8
+
+# SFT(data/sft/examples.jsonl で指示追従を学習、data/checkpoint_sft.pt に保存)
+.venv/Scripts/python scripts/sft.py --epochs 20
 
 # テスト実行
 .venv/Scripts/python -m pytest tests/ -v

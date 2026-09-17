@@ -1,0 +1,18 @@
+{"prompt": "# Write a function that prints FizzBuzz from 1 to n.\n", "response": "def fizzbuzz(n):\n    for i in range(1, n + 1):\n        if i % 15 == 0:\n            print(\"FizzBuzz\")\n        elif i % 3 == 0:\n            print(\"Fizz\")\n        elif i % 5 == 0:\n            print(\"Buzz\")\n        else:\n            print(i)\n"}
+{"prompt": "# Write a function that checks whether a number is prime.\n", "response": "def is_prime(n):\n    if n < 2:\n        return False\n    for i in range(2, int(n ** 0.5) + 1):\n        if n % i == 0:\n            return False\n    return True\n"}
+{"prompt": "# Write a function that reverses a string.\n", "response": "def reverse_string(s):\n    return s[::-1]\n"}
+{"prompt": "# Write a function that checks whether a string is a palindrome.\n", "response": "def is_palindrome(s):\n    return s == s[::-1]\n"}
+{"prompt": "# Write a function that computes the factorial of n.\n", "response": "def factorial(n):\n    if n == 0:\n        return 1\n    return n * factorial(n - 1)\n"}
+{"prompt": "# Write a function that returns the nth Fibonacci number.\n", "response": "def fibonacci(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n"}
+{"prompt": "# Write a function that sums a list of numbers.\n", "response": "def sum_list(nums):\n    total = 0\n    for x in nums:\n        total += x\n    return total\n"}
+{"prompt": "# Write a function that returns the largest number in a list.\n", "response": "def max_of_list(nums):\n    best = nums[0]\n    for x in nums[1:]:\n        if x > best:\n            best = x\n    return best\n"}
+{"prompt": "# Write a function that counts the vowels in a string.\n", "response": "def count_vowels(s):\n    return sum(1 for c in s.lower() if c in \"aeiou\")\n"}
+{"prompt": "# Write a function that computes the greatest common divisor of a and b.\n", "response": "def gcd(a, b):\n    while b:\n        a, b = b, a % b\n    return a\n"}
+{"prompt": "# Write a function that checks whether a year is a leap year.\n", "response": "def is_leap_year(year):\n    return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)\n"}
+{"prompt": "# Write a function that sorts a list using bubble sort.\n", "response": "def bubble_sort(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(0, n - i - 1):\n            if arr[j] > arr[j + 1]:\n                arr[j], arr[j + 1] = arr[j + 1], arr[j]\n    return arr\n"}
+{"prompt": "# Write a function that performs binary search for target in a sorted list.\n", "response": "def binary_search(arr, target):\n    lo, hi = 0, len(arr) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n"}
+{"prompt": "# Write a function that checks whether all characters in a string are unique.\n", "response": "def unique_chars(s):\n    return len(set(s)) == len(s)\n"}
+{"prompt": "# Write a function that counts the words in a string.\n", "response": "def word_count(s):\n    return len(s.split())\n"}
+{"prompt": "# Write a function that checks whether two strings are anagrams.\n", "response": "def is_anagram(a, b):\n    return sorted(a) == sorted(b)\n"}
+{"prompt": "# Write a function that sums the digits of a number.\n", "response": "def digit_sum(n):\n    return sum(int(d) for d in str(abs(n)))\n"}
+{"prompt": "# Write a function that computes base raised to exp.\n", "response": "def power(base, exp):\n    result = 1\n    for _ in range(exp):\n        result *= base\n    return result\n"}

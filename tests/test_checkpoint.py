@@ -39,3 +39,13 @@ def test_load_checkpoint_reproduces_identical_outputs(tmp_path):
 
     token_ids = torch.randint(0, CONFIG["vocab_size"], (1, 5))
     assert torch.allclose(model(token_ids), loaded(token_ids))
+
+
+def test_load_checkpoint_stashes_config_for_resaving(tmp_path):
+    model = TinyGPT(**CONFIG)
+    path = tmp_path / "checkpoint.pt"
+    save_checkpoint(model, path, CONFIG)
+
+    loaded = load_checkpoint(path)
+
+    assert loaded.config == CONFIG
