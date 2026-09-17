@@ -18,7 +18,8 @@ BPEトークナイザー→小型GPT-2→事前学習→強化学習→SFTとい
 - [x] 事前学習(`src/codebot/train`) — `train.bin`からランダムな窓を切り出してnext-token予測、cross entropy loss、AdamWで学習
   - `get_batch` — (入力, 1つずらしたターゲット)のペアをランダムサンプリング
   - `train_loop` — 学習ステップ+定期的にval lossを評価。`TinyGPT.generate`で温度付きサンプリング生成も可能に
-  - `scripts/pretrain.py` — 学習前後の生成テキストを見比べられるCLI。現状のコーパスは899トークンしかなく過学習気味(train_loss/val_lossの乖離)だが、`if`/`return`など実際のコードらしいトークンが出るようになることは確認済み
+  - `scripts/pretrain.py` — 学習前後の生成テキストを見比べられるCLI。チェックポイントはモデル構成(config)も一緒に保存(`save_checkpoint`/`load_checkpoint`)。現状のコーパスは899トークンしかなく過学習気味(train_loss/val_lossの乖離)だが、`if`/`return`など実際のコードらしいトークンが出るようになることは確認済み
+  - `scripts/generate.py` — 学習済みチェックポイントから任意のプロンプトでテキスト生成するCLI(`--temperature`, `--seed`指定可)
 - [ ] 強化学習(報酬: テスト通過 + コードが短いほど高得点)
 - [ ] SFT
 
@@ -38,6 +39,9 @@ python -m venv .venv
 
 # 事前学習(data/checkpoint.pt に保存)
 .venv/Scripts/python scripts/pretrain.py --steps 500
+
+# 学習済みチェックポイントからテキスト生成
+.venv/Scripts/python scripts/generate.py --prompt "def " --temperature 0.8
 
 # テスト実行
 .venv/Scripts/python -m pytest tests/ -v

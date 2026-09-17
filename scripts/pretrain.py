@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 sys.stdout.reconfigure(encoding="utf-8")
 
 from codebot.data.prepare import load_ids  # noqa: E402
-from codebot.model import TinyGPT  # noqa: E402
+from codebot.model import TinyGPT, save_checkpoint  # noqa: E402
 from codebot.tokenizer import BPETokenizer  # noqa: E402
 from codebot.train import train_loop  # noqa: E402
 
@@ -51,14 +51,15 @@ def main() -> None:
     train_data = load_ids(args.train_bin, vocab_size)
     val_data = load_ids(args.val_bin, vocab_size)
 
-    model = TinyGPT(
-        vocab_size=vocab_size,
-        d_model=args.d_model,
-        n_heads=args.n_heads,
-        d_ff=args.d_ff,
-        n_layers=args.n_layers,
-        max_seq_len=args.block_size,
-    )
+    config = {
+        "vocab_size": vocab_size,
+        "d_model": args.d_model,
+        "n_heads": args.n_heads,
+        "d_ff": args.d_ff,
+        "n_layers": args.n_layers,
+        "max_seq_len": args.block_size,
+    }
+    model = TinyGPT(**config)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"vocab_size={vocab_size}, params={n_params:,}")
 
@@ -85,7 +86,7 @@ def main() -> None:
     )
     print(f"\nafter training:  {after!r}")
 
-    torch.save(model.state_dict(), args.out)
+    save_checkpoint(model, args.out, config)
     print(f"\nsaved checkpoint to {args.out}")
 
 
