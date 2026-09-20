@@ -5,3 +5,4 @@ __pycache__/
 data/tokenizer.json
 data/*.bin
 data/*.pt
+data/eval_history.jsonl

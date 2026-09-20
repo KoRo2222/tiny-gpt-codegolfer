@@ -33,10 +33,19 @@ def sample_completion(
 
     for _ in range(max_new_tokens):
         context = token_ids[:, -max_seq_len:]
-        logits = model(context)[:, -1, :] / temperature
-        probs = torch.softmax(logits, dim=-1)
-        next_id = torch.multinomial(probs, num_samples=1)
+        logits = model(context)[:, -1, :]
 
+        if temperature <= 1e-8:
+            # Greedy decoding: deterministic, for reproducible eval runs.
+            probs = torch.softmax(logits, dim=-1)
+            next_id = torch.argmax(logits, dim=-1, keepdim=True)
+        else:
+            probs = torch.softmax(logits / temperature, dim=-1)
+            next_id = torch.multinomial(probs, num_samples=1)
+
+        # log-prob under whichever distribution actually produced next_id
+        # -- GRPO's importance ratio is only meaningful if this matches
+        # the draw, temperature-scaled or not.
         log_probs.append(torch.log(probs[0, next_id.item()] + 1e-12).item())
         response_ids.append(next_id.item())
         token_ids = torch.cat([token_ids, next_id], dim=1)
