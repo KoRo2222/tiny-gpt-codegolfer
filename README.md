@@ -33,11 +33,12 @@ BPEトークナイザー→小型GPT-2→事前学習→SFT→強化学習とい
   - `grpo.grpo_loss` — クリップ付き重要度比サロゲート損失+(参照モデルに対する)KL正則化項。全員同じ報酬(学習シグナルなし)のグループはスキップ
   - `data/rl/tasks.jsonl` — テストアサーション付きのコードゴルフお題73件(`task_catalog.py`から自動生成)
   - `scripts/rl.py` — SFTチェックポイントを起点に(同じ重みを凍結した参照モデルとしても使用)GRPOで学習、`data/checkpoint_rl.pt`に保存
-  - 「アドバンテージが正の時に実際にそのレスポンスの確率が上がる」ことをユニットテストで直接確認済み。データ拡充後に実データで通しデモをやり直したところ、`is_even`や`is_palindrome`など多くのタスクで報酬1.0〜1.8(テスト通過)が出るようになった一方、`caesar_cipher`や`bubble_sort`のような複数行アルゴリズムはまだ報酬0のまま — ちょうど良い難易度勾配ができている
+  - 「アドバンテージが正の時に実際にそのレスポンスの確率が上がる」ことをユニットテストで直接確認済み
+  - `reward.run_tests`は生成コードを一時ファイルに書いてから実行する方式。以前は`python -c <script>`の引数文字列として渡していたため、バイトレベルBPEがヌル文字(`\x00`)を含むトークン列をサンプルした瞬間に`subprocess.run`が`ValueError`で丸ごとクラッシュするバグがあった(300stepの実ランで実際に踏んだ)
 - [x] 評価スクリプト(`src/codebot/rl/evaluate.py`) — 学習の効果を1枚のサンプルの目視ではなく数値で追えるように
   - `evaluate_model` — 全RLタスクに対してpass@num_samplesと(通過した場合の)平均コード長を集計。`sample_fn`を差し替え可能にしてあり、テストは本物のモデルではなく固定の偽サンプラーで採点ロジックだけを検証
   - `scripts/evaluate.py` — タスクごとのpass/fail一覧+「solved N/M」を表示し、`data/eval_history.jsonl`に追記(実行のたびに記録が積み上がるので、学習を伸ばした効果を後から比較できる)
-  - 実際に`checkpoint_rl.pt`を評価したところ73タスク中66タスクを通過(mean pass_rate=0.89)。`caesar_cipher`/`rot13`/`merge_sorted`/`bubble_sort`/`selection_sort`/`insertion_sort`/`binary_search`の7つだけがまだ通らない、という具体的な弱点が数値で見えるようになった
+  - データ拡充後にGRPOを300step(group_size=12)まで伸ばし、`--max-new-tokens`を60→120に上げて(ソート系アルゴリズムが生成途中で打ち切られて不当に失格していたバグを修正)評価し直したところ、**73タスク全て通過**(pass@10, temperature=1.0)。`caesar_cipher`/`rot13`/ソート3種/`binary_search`は依然としてpass_rateが0.1〜0.5程度と低い(=たまにしか解けない)ものの、以前は0%だったところから改善した
 
 ## セットアップ
 

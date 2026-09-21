@@ -27,6 +27,15 @@ def test_run_tests_fails_on_infinite_loop_via_timeout():
     assert run_tests(code, GCD_TESTS, timeout=0.5) is False
 
 
+def test_run_tests_handles_embedded_null_byte_without_crashing():
+    # A byte-level BPE model can sample a literal NUL; passing that as a
+    # `-c` argv string used to raise ValueError ("embedded null
+    # character") straight out of subprocess.run and crash the training
+    # loop. It should just fail like any other broken sample.
+    code = "def gcd(a, b):\n    return a\x00 + b\n"
+    assert run_tests(code, GCD_TESTS) is False
+
+
 def test_code_golf_reward_is_zero_for_failing_code():
     assert code_golf_reward("def gcd(a, b):\n    return 0\n", GCD_TESTS) == 0.0
 

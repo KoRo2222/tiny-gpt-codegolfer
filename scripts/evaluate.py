@@ -39,7 +39,7 @@ def main() -> None:
     )
     parser.add_argument("--num-samples", type=int, default=1)
     parser.add_argument("--temperature", type=float, default=0.0)
-    parser.add_argument("--max-new-tokens", type=int, default=60)
+    parser.add_argument("--max-new-tokens", type=int, default=120)
     args = parser.parse_args()
 
     for path in (args.tokenizer, args.checkpoint, args.tasks):

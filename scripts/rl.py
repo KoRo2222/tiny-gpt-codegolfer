@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def show_sample(model, tokenizer, task, label) -> None:
     prompt_ids = tokenizer.encode(task["prompt"])
-    response_ids, _ = sample_completion(model, tokenizer, prompt_ids, max_new_tokens=60)
+    response_ids, _ = sample_completion(model, tokenizer, prompt_ids, max_new_tokens=120)
     eot_id = tokenizer.special_tokens[tokenizer.EOT_TOKEN]
     code = tokenizer.decode([t for t in response_ids if t != eot_id])
     passed = run_tests(code, task["tests"])
@@ -48,7 +48,7 @@ def main() -> None:
     parser.add_argument("--out", default=str(ROOT / "data" / "checkpoint_rl.pt"))
     parser.add_argument("--steps", type=int, default=100)
     parser.add_argument("--group-size", type=int, default=8)
-    parser.add_argument("--max-new-tokens", type=int, default=60)
+    parser.add_argument("--max-new-tokens", type=int, default=120)
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--clip-eps", type=float, default=0.2)
