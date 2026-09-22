@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -53,6 +54,19 @@ def main() -> None:
     parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--clip-eps", type=float, default=0.2)
     parser.add_argument("--kl-coef", type=float, default=0.02)
+    parser.add_argument(
+        "--oversample",
+        default="",
+        help=(
+            "comma-separated entry_points to repeat more often in the task "
+            "cycle -- a simple curriculum for tasks the model still gets "
+            "wrong most of the time, without starving the ones it already "
+            "has (which still show up once per cycle, keeping the KL "
+            "term's job of preventing forgetting meaningful)."
+        ),
+    )
+    parser.add_argument("--oversample-factor", type=int, default=5)
+    parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
     for path in (args.tokenizer, args.checkpoint, args.tasks):
@@ -72,6 +86,24 @@ def main() -> None:
         if line.strip()
     ]
     print(f"loaded {len(tasks)} RL tasks")
+
+    if args.oversample:
+        names = set(args.oversample.split(","))
+        unknown = names - {t["entry_point"] for t in tasks}
+        if unknown:
+            raise SystemExit(f"--oversample names not found in tasks: {unknown}")
+        extra = [
+            t
+            for t in tasks
+            if t["entry_point"] in names
+            for _ in range(args.oversample_factor - 1)
+        ]
+        tasks = tasks + extra
+        random.Random(args.seed).shuffle(tasks)
+        print(
+            f"oversampled {names} by {args.oversample_factor}x "
+            f"-> {len(tasks)} tasks per cycle"
+        )
 
     demo_task = tasks[0]
     show_sample(model, tokenizer, demo_task, "before GRPO")
