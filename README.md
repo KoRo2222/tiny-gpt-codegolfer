@@ -1,45 +1,19 @@
 # tiny-gpt-codegolfer
 
-BPEトークナイザー→小型GPT-2→事前学習→SFT→強化学習という流れで、ゼロから作るコードゴルフ特化のLLM。短くてテストに通るPythonコードを書けるように育てていく個人プロジェクト。
+BPEトークナイザー、GPT-2アーキテクチャ、事前学習、SFT、強化学習(GRPO)まで、全てゼロから自前実装した小型LLM。短くてテストに通るPythonコードを書くこと(コードゴルフ)に特化して育てている。
 
-## 進捗
+## 構成
 
-- [x] BPEトークナイザー(`src/codebot/tokenizer`)
-  - 学習アルゴリズム(バイトレベルBPE、GPT-2方式)
-  - `<|endoftext|>`特殊トークンと、複数文書をEOT区切りの1本のid列に詰める`encode_with_eot`
-- [x] 事前トークン化(`src/codebot/data`) — コーパスをあらかじめid列に変換し、`data/train.bin` / `data/val.bin`として保存(学習ループが毎回テキストを読まず`np.memmap`で読める形式)
-- [x] データセット拡充(`src/codebot/data/task_catalog.py`) — 数値/文字列/リスト/探索・ソート/クラスにわたる関数・クラス75件を1つのカタログとして定義。`scripts/build_datasets.py`がここから事前学習コーパス・SFT例・RLタスク(テスト付き)を自動生成するので、3つのデータセットが食い違わない。生成時にRLタスクのテストを実際に実行して自己検証(不正なテストは即エラー)
-- [x] 小型GPT-2の実装(`src/codebot/model`) — GPT-2方式のTransformerデコーダー
-  - Attention — 「ソフトなディクショナリ」としてのscaled dot-product attention。query-key類似度→softmax→valueの重み付き和。causalマスク・1/√d_kスケーリング対応
-  - `TokenPositionalEmbedding` — トークン埋め込み+位置埋め込み(絶対位置埋め込み)
-  - `MultiHeadAttention` — Attentionをヘッドに分けて並列適用。QKV射影とValue行列を使用
-  - `FeedForward` — 位置ごとのLinear→GELU→Linear
-  - `TransformerBlock` — Attention(Pre-LN, 残差)→FFN(Pre-LN, 残差)
-  - `TinyGPT` — Embed→`TransformerBlock`をn_layers層スタック→最終LayerNorm(ln_f)→Linear(lm_head、埋め込み層と重み共有)→(softmaxは`next_token_probs`で分離)
-- [x] 事前学習(`src/codebot/train`) — `train.bin`からランダムな窓を切り出してnext-token予測、cross entropy loss、AdamWで学習
-  - `get_batch` — (入力, 1つずらしたターゲット)のペアをランダムサンプリング
-  - `train_loop` — 学習ステップ+定期的にval lossを評価。`TinyGPT.generate`で温度付きサンプリング生成も可能に
-  - `scripts/pretrain.py` — 学習前後の生成テキストを見比べられるCLI。チェックポイントはモデル構成(config)も一緒に保存(`save_checkpoint`/`load_checkpoint`)。コーパス拡充後も2500トークン程度と小さく、なお過学習気味(train_loss/val_lossの乖離)だが、モデル・データともまだ小さい個人プロジェクトの範囲では想定通り
-  - `scripts/generate.py` — 学習済みチェックポイントから任意のプロンプトでテキスト生成するCLI(`--temperature`, `--seed`指定可)
-- [x] SFT(`src/codebot/train/sft.py`) — 指示文(プロンプト)→コード(応答)のペアで事前学習済みモデルを微調整
-  - `build_example` — プロンプト+応答+EOTを1本のid列にし、損失は応答部分のトークンだけに掛ける(プロンプト部分は`ignore_index`でマスク)
-  - `sft_loop` — 1件ずつ(batch_size=1)optimizer stepするシンプルな実装。paddingやattentionマスクをまだ持っていないためバッチ化は見送り
-  - `data/sft/examples.jsonl` — 「〜する関数を書け」という指示文と、対応するPython関数/クラスのペア75件(`task_catalog.py`から自動生成)
-  - `scripts/sft.py` — 事前学習済みチェックポイントを読み込んでSFTし、`data/checkpoint_sft.pt`に保存。学習前後の生成を比較可能
-- [x] 強化学習(`src/codebot/rl`) — GRPO(Group Relative Policy Optimization)、報酬はコード実行結果(テスト通過+短いほど高得点)
-  - `reward.code_golf_reward` — 生成コードをsubprocessで実行(タイムアウト付き、無限ループ対策)しテストを通すか判定。通れば1.0+短さボーナス、通らなければ0.0
-  - `sampling.sample_completion` — 1本の補完をサンプリングしつつ、各トークンのサンプリング時log-probを記録(GRPOの重要度比の分母)
-  - `grpo.group_relative_advantages` — 同じプロンプトから採った複数サンプル(グループ)内で報酬を正規化。PPOの学習済み価値関数の代わりにこれをベースラインにするのがGRPOの要点
-  - `grpo.grpo_loss` — クリップ付き重要度比サロゲート損失+(参照モデルに対する)KL正則化項。全員同じ報酬(学習シグナルなし)のグループはスキップ
-  - `data/rl/tasks.jsonl` — テストアサーション付きのコードゴルフお題73件(`task_catalog.py`から自動生成)
-  - `scripts/rl.py` — SFTチェックポイントを起点に(同じ重みを凍結した参照モデルとしても使用)GRPOで学習、`data/checkpoint_rl.pt`に保存
-  - 「アドバンテージが正の時に実際にそのレスポンスの確率が上がる」ことをユニットテストで直接確認済み
-  - `reward.run_tests`は生成コードを一時ファイルに書いてから実行する方式。以前は`python -c <script>`の引数文字列として渡していたため、バイトレベルBPEがヌル文字(`\x00`)を含むトークン列をサンプルした瞬間に`subprocess.run`が`ValueError`で丸ごとクラッシュするバグがあった(300stepの実ランで実際に踏んだ)
-- [x] 評価スクリプト(`src/codebot/rl/evaluate.py`) — 学習の効果を1枚のサンプルの目視ではなく数値で追えるように
-  - `evaluate_model` — 全RLタスクに対してpass@num_samplesと(通過した場合の)平均コード長を集計。`sample_fn`を差し替え可能にしてあり、テストは本物のモデルではなく固定の偽サンプラーで採点ロジックだけを検証
-  - `scripts/evaluate.py` — タスクごとのpass/fail一覧+「solved N/M」を表示し、`data/eval_history.jsonl`に追記(実行のたびに記録が積み上がるので、学習を伸ばした効果を後から比較できる)
-  - データ拡充後にGRPOを300step(group_size=12)まで伸ばし、`--max-new-tokens`を60→120に上げて(ソート系アルゴリズムが生成途中で打ち切られて不当に失格していたバグを修正)評価し直したところ、**73タスク全て通過**(pass@10, temperature=1.0)。`caesar_cipher`/`rot13`/ソート3種/`binary_search`は依然としてpass_rateが0.1〜0.5程度と低い(=たまにしか解けない)ものの、以前は0%だったところから改善した
-  - `--oversample`(指定したentry_pointをタスクサイクル内で多く繰り返す簡易カリキュラム)を追加し、この7タスクを重点的に500step追加学習させてみたところ、結果は狙い通りにはいかなかった。一部(`caesar_cipher`, `insertion_sort`, `binary_search`)は改善した一方、`selection_sort`/`merge_sorted`はむしろ悪化し、さらに元々1.00だった簡単なタスクの多くも0.7〜0.9へ低下(全体平均は0.823→0.851とわずかに改善はしたが、ねらった「難タスクの信頼性向上」は未達)。学習後のデモで`selection_sort`を聞かれて`insertion_sort`の中身を書いてしまう場面があり、似た構造の複数アルゴリズムを同時に重点学習させたことでタスク間の混同が起きたとみられる。26万パラメータのモデルに5種類の似たソートアルゴリズムを同時に叩き込むのは荷が重かった可能性が高く、次に試すなら「1タスクずつ順番に重点学習」「kl_coefを上げて既存タスクの記憶を守る」「SFT例をこの関数群だけ増やす」あたりが有望
+- **トークナイザー**(`src/codebot/tokenizer`) — バイトレベルBPEを学習アルゴリズムから自前実装。GPT-2方式のプリトークナイズ、`<|endoftext|>`による文書区切り
+- **モデル**(`src/codebot/model`) — GPT-2方式のTransformerデコーダー。Multi-Head Attention、位置ごとのFeedForward、Pre-LN残差ブロック、埋め込み層とLM headの重み共有
+- **データ**(`src/codebot/data/task_catalog.py`) — 数値・文字列・リスト・探索/ソート・クラスにまたがる75件の関数/クラスを1つのカタログとして定義し、事前学習コーパス・SFT例・RLタスク(テスト付き)をそこから自動生成。3つのデータセットが食い違わない
+- **学習**(`src/codebot/train`) — next-token予測による事前学習と、プロンプト部分をマスクしたSFT(指示追従)
+- **強化学習**(`src/codebot/rl`) — GRPO。プロンプトごとに複数の補完をサンプリングし、実際にコードを実行してテスト通過+短さを報酬に、クリップ付き重要度比サロゲート損失とKL正則化で方策を更新
+- **評価**(`src/codebot/rl/evaluate.py`) — 全タスクに対するpass rateを記録し、学習の効果を数値で追跡
+
+## 現状
+
+コードゴルフお題73件全てで(少なくとも稀には)正解を出せる。四則演算・文字列判定・リスト操作などの単純なお題はほぼ確実に解けるが、ソートアルゴリズムや暗号化のような複数行アルゴリズムはまだ成功率が低い。パラメータ数・データ量ともに小さい個人プロジェクトの規模なので、未知のお題への汎化はまだ弱く、既知のパターンの組み合わせが中心。
 
 ## セットアップ
 
